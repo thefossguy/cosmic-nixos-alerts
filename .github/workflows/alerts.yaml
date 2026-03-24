@@ -1,0 +1,45 @@
+name: COSMIC alerts
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 * * * *' # Hourly
+
+jobs:
+  canary-build:
+    name: COSMIC (${{ matrix.flakeOutput }} | ${{ matrix.nixSystem }})
+    # https://github.com/actions/partner-runner-images/tree/main/images
+    runs-on:  ${{ matrix.nixSystem == 'x86_64-linux' && 'ubuntu-24.04' || 'ubuntu-24.04-arm' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        nixSystem: [ aarch64-linux, x86_64-linux, ]
+        flakeOutput: [ cosmicPkgs, cosmicTests, ]
+
+    steps:
+      - run: TZ='Asia/Kolkata' date +'%Y/%m/%d %H:%M:%S'
+      - uses: actions/checkout@main
+      - uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Checking out my NixOS config repo
+        uses: actions/checkout@main
+        with:
+          repository: 'thefossguy/prathams-nixos'
+
+      - name: Building the binary for the CI
+        run: |
+          pushd "${GITHUB_WORKSPACE}/prathams-nixos"
+          nix flake update
+          nix build .#packages.${{ matrix.nixSystem }}.navya-ci
+          popd
+
+      - name: Running the CI
+        run: |
+          pushd "${GITHUB_WORKSPACE}/cosmic-nixos-alerts"
+          nix flake update
+          nix run "${GITHUB_WORKSPACE}/prathams-nixos#packages.${{ matrix.nixSystem }}.navya-ci" -- \
+              --flake-path "$(realpath "${GITHUB_WORKSPACE}/cosmic-nixos-alerts")" \
+              --machine-role quick_ci \
+              --nix-system ${{ matrix.nixSystem }} \
+              --flake-output-to-build ${{ matrix.flakeOutput }} \
+              #EOF
+          popd
