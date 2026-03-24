@@ -17,8 +17,11 @@ jobs:
 
     steps:
       - run: TZ='Asia/Kolkata' date +'%Y/%m/%d %H:%M:%S'
-      - uses: actions/checkout@main
       - uses: DeterminateSystems/nix-installer-action@main
+        with:
+          extra-conf: |
+            substituters = https://cache.nixos.org https://nix-cache.thefossguy.com
+            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= 10.0.0.24:g29fjBRU/VGj6kkIQqjm0o5sxWduZ1hNNLTnSeF/AAU=
 
       - name: Checking out my NixOS config repo
         uses: actions/checkout@main
@@ -32,6 +35,12 @@ jobs:
           nix flake update
           nix build .#packages.${{ matrix.nixSystem }}.navya-ci
           popd
+
+      - name: Cloning the COSMIC alerts git repository
+        uses: actions/checkout@main
+        with:
+          repository: 'thefossguy/cosmic-nixos-alerts'
+          path: 'cosmic-nixos-alerts'
 
       - name: Running the CI
         run: |
