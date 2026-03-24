@@ -24,6 +24,7 @@ jobs:
         uses: actions/checkout@main
         with:
           repository: 'thefossguy/prathams-nixos'
+          path: 'prathams-nixos'
 
       - name: Building the binary for the CI
         run: |
